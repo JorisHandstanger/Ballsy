@@ -1,0 +1,28 @@
+'use strict';
+
+let fs = require('fs');
+let path = require('path');
+
+module.exports.register = (server, options, next) => {
+
+  fs.readdirSync(__dirname).forEach(file => {
+
+    if (file === 'index.js' || !file.endsWith('.js') || file.startsWith('_')) return;
+
+    let mod = {};
+    mod[path.basename(file, '.js')] = require(path.join(__dirname, file));
+
+    for(let route in mod) {
+      server.route(mod[route]);
+    }
+
+  });
+
+  next();
+
+};
+
+module.exports.register.attributes = {
+  name: 'routes',
+  version: '0.1.0'
+};

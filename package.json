@@ -1,0 +1,44 @@
+{
+  "name": "Ballsy",
+  "version": "0.1.0",
+  "description": "",
+  "main": "server.js",
+  "author": "Joris Handstanger",
+  "scripts": {
+    "development": "gulp & webpack --watch & npm run serve",
+    "production": "webpack -d -p",
+    "start": "forever --minUptime 1000 --spinSleepTime 1000 .",
+    "serve": "nodemon ."
+  },
+  "devDependencies": {
+    "autoprefixer-core": "^5.2.1",
+    "babel-core": "^5.8.22",
+    "babel-eslint": "^4.0.10",
+    "babel-loader": "^5.3.2",
+    "css-loader": "^0.16.0",
+    "eslint": "^1.6.0",
+    "eslint-loader": "^1.0.0",
+    "extract-text-webpack-plugin": "^0.8.2",
+    "gulp": "^3.9.0",
+    "gulp-cached": "^1.1.0",
+    "gulp-eslint": "^1.0.0",
+    "node-sass": "^3.3.3",
+    "array.from": "^0.2.0",
+    "postcss-loader": "^0.5.1",
+    "sass-loader": "^2.0.1",
+    "style-loader": "^0.12.3",
+    "webpack": "^1.11.0"
+  },
+  "engines": {
+    "node": "4.x.x",
+    "npm": "3.x.x"
+  },
+  "dependencies": {
+    "forever": "^0.15.1",
+    "hapi": "^10.0.1",
+    "inert": "^3.0.1",
+    "dotenv": "^1.2.0",
+    "lodash": "^3.10.1"
+  },
+  "license": "MIT"
+}
