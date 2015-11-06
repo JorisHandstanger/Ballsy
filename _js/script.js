@@ -1,9 +1,11 @@
 'use strict';
 
-import thecontrols from './modules/controls';
+require('./modules/controls');
+
 import Orb from './modules/Orb';
 
-let camera, scene, renderer;
+let camera, scene, renderer, composer;
+
 let geometry, material, mesh;
 let controls;
 
@@ -43,6 +45,16 @@ if ( havePointerLock ) {
     instructions.style.display = '';
   };
 
+  // Performance monitor voor development
+  var stats = new Stats();
+  stats.setMode( 0 ); // 0: fps, 1: ms, 2: mb
+
+  stats.domElement.style.position = 'absolute';
+  stats.domElement.style.left = '0px';
+  stats.domElement.style.top = '0px';
+
+  document.body.appendChild( stats.domElement );
+
   // Hook pointer lock state change events
   document.addEventListener( 'pointerlockchange', pointerlockchange, false );
   document.addEventListener( 'mozpointerlockchange', pointerlockchange, false );
@@ -77,42 +89,6 @@ if ( havePointerLock ) {
     }
   }, false);
 
-  // instructions.addEventListener('click', function(){
-  //
-  //   instructions.style.display = 'none';
-  //
-  //   // Ask the browser to lock the pointer
-  //   element.requestPointerLock = element.requestPointerLock || element.mozRequestPointerLock || element.webkitRequestPointerLock;
-  //
-  //   if ( /Firefox/i.test( navigator.userAgent ) ) {
-  //
-  //     var fullscreenchange = function () {
-  //
-  //       if ( document.fullscreenElement === element || document.mozFullscreenElement === element || document.mozFullScreenElement === element ) {
-  //
-  //         document.removeEventListener( 'fullscreenchange', fullscreenchange );
-  //         document.removeEventListener( 'mozfullscreenchange', fullscreenchange );
-  //
-  //         element.requestPointerLock();
-  //       }
-  //
-  //     };
-  //
-  //     document.addEventListener( 'fullscreenchange', fullscreenchange, false );
-  //     document.addEventListener( 'mozfullscreenchange', fullscreenchange, false );
-  //
-  //     element.requestFullscreen = element.requestFullscreen || element.mozRequestFullscreen || element.mozRequestFullScreen || element.webkitRequestFullscreen;
-  //
-  //     element.requestFullscreen();
-  //
-  //   } else {
-  //
-  //     element.requestPointerLock();
-  //
-  //   }
-  //
-  // }, false);
-
 } else {
   instructions.innerHTML = 'Your browser doesn\'t seem to support Pointer Lock API';
 }
@@ -128,6 +104,7 @@ let prevTime = performance.now();
 let velocity = new THREE.Vector3();
 
 const init = () => {
+
   camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 1, 1000 );
 
   scene = new THREE.Scene();
@@ -140,7 +117,7 @@ const init = () => {
   controls = new THREE.PointerLockControls( camera );
   scene.add( controls.getObject() );
 
-  for (let i = 0; i <= 10; i++) {
+  for (let i = 0; i <= 50; i++) {
     let orb = new Orb(
       getRandomPoint(),
       getRandomColor()
@@ -206,24 +183,27 @@ const init = () => {
   raycaster = new THREE.Raycaster( new THREE.Vector3(), new THREE.Vector3( 0, -1, 0 ), 0, 10 );
 
   // floor
-  geometry = new THREE.PlaneGeometry( 2000, 2000, 100, 100 );
+  geometry = new THREE.PlaneGeometry( 2000, 2000 );
   geometry.rotateX(-Math.PI / 2 );
 
-  //vorm van vloer
-  for (let i = 0, l = geometry.vertices.length; i < l; i++) {
-    let vertex = geometry.vertices[ i ];
-    vertex.x += Math.random() * 20 - 10;
-    vertex.y += Math.random() * 10;
-    vertex.z += Math.random() * 20 - 10;
-  }
-
-  material = new THREE.MeshPhongMaterial( { color: 0x444444, specular: 0x444444, shininess: 30 } );
+  material = new THREE.MeshPhongMaterial( {
+    color: 0x000000,
+    specular: 0x0F0F0F,
+    shininess: 60
+  });
 
   mesh = new THREE.Mesh( geometry, material );
   scene.add( mesh );
 
+  var grid = new THREE.GridHelper(1000, 30);
+  grid.setColors( new THREE.Color(0x333333), new THREE.Color(0x333333) );
+  grid.position.y = 1;
+  scene.add(grid);
+
+  // Renderen van de orbs
+
   orbs.forEach(e => {
-    scene.add(e.render(camera));
+    scene.add(e.render());
   });
 
   //
@@ -234,7 +214,23 @@ const init = () => {
   document.body.appendChild( renderer.domElement );
 
   //
+  renderer.autoClear = false;
+
+  composer = new THREE.EffectComposer(renderer);
+
+  var renderPass = new THREE.RenderPass(scene, camera);
+  composer.addPass(renderPass);
+
+  // Bloom pass voor glow
+
+  var bloomPass = new THREE.BloomPass(2, 20, 3, 256); // (strength, kernelSize, sigma, resolution)
+  composer.addPass(bloomPass);
+  var effectCopy = new THREE.ShaderPass(THREE.CopyShader);
+  effectCopy.renderToScreen = true;
+  composer.addPass(effectCopy);
+
   window.addEventListener( 'resize', onWindowResize, false );
+
 };
 
 const onWindowResize = () => {
@@ -244,14 +240,11 @@ const onWindowResize = () => {
   renderer.setSize( window.innerWidth, window.innerHeight );
 };
 
-const update = () => {
-  orbs.forEach(e => {
-    e.update(controls);
-  });
-};
-
 const animate = () => {
+
   requestAnimationFrame( animate );
+
+  stats.begin(); // Begin van te monitoren code
 
   if ( controlsEnabled ) {
     raycaster.ray.origin.copy( controls.getObject().position );
@@ -281,32 +274,46 @@ const animate = () => {
     prevTime = time;
   }
 
-  renderer.render( scene, camera );
-  update();
+  renderer.clear();
+  composer.render();
+
+  orbs.forEach(e => {
+    e.update();
+  });
+
+  stats.end();
 };
 
 const getRandomPoint = () => {
+
   return {
     x: randomBetween(-300, 300),
     y: randomBetween(10, 60),
     z: randomBetween(-300, 300)
   };
+
 };
 
 const randomBetween = (min, max) => {
+
   let rand = min + Math.random() * (max-min);
   if(rand) rand = Math.round(rand);
 
   return rand;
+
 };
 
 const getRandomColor = () => {
+
   let letters = '0123456789ABCDEF'.split('');
   let color = '0x';
+
   for (let i = 0; i < 6; i++ ) {
     color += letters[Math.floor(Math.random() * 16)];
   }
+
   return color;
+
 };
 
 init();

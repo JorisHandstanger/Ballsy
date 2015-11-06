@@ -190,7 +190,8 @@
   },
 
   "globals": {
-    "THREE": true
+    "THREE": true,
+    "Stats": true
   }
 
 }
