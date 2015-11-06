@@ -1,45 +1,33 @@
 'use strict';
 
-// some features need the be polyfilled..
-// https://babeljs.io/docs/usage/polyfill/
-
-// import 'babel-core/polyfill';
-// or import specific polyfills
-// import {$} from './helpers/util';
-
 import thecontrols from './modules/controls';
 import Orb from './modules/Orb';
 
-var camera, scene, renderer;
-var geometry, material, mesh;
-var controls;
+let camera, scene, renderer;
+let geometry, material, mesh;
+let controls;
 
-var orbs = [];
+let orbs = [];
 
-var raycaster;
+let raycaster;
 
-var blocker = document.getElementById( 'blocker' );
-var instructions = document.getElementById( 'instructions' );
+let blocker = document.getElementById( 'blocker' );
+let instructions = document.getElementById( 'instructions' );
 
 // http://www.html5rocks.com/en/tutorials/pointerlock/intro/
-
-var havePointerLock = 'pointerLockElement' in document || 'mozPointerLockElement' in document || 'webkitPointerLockElement' in document;
+let havePointerLock = 'pointerLockElement' in document || 'mozPointerLockElement' in document || 'webkitPointerLockElement' in document;
 
 if ( havePointerLock ) {
+  let element = document.body;
 
-  var element = document.body;
-
-  var pointerlockchange = function () {
+  let pointerlockchange = function () {
 
     if ( document.pointerLockElement === element || document.mozPointerLockElement === element || document.webkitPointerLockElement === element ) {
-
       controlsEnabled = true;
       controls.enabled = true;
 
       blocker.style.display = 'none';
-
     } else {
-
       controls.enabled = false;
 
       blocker.style.display = '-webkit-box';
@@ -47,15 +35,12 @@ if ( havePointerLock ) {
       blocker.style.display = 'box';
 
       instructions.style.display = '';
-
     }
 
   };
 
-  var pointerlockerror = function () {
-
+  const pointerlockerror = () => {
     instructions.style.display = '';
-
   };
 
   // Hook pointer lock state change events
@@ -67,85 +52,103 @@ if ( havePointerLock ) {
   document.addEventListener( 'mozpointerlockerror', pointerlockerror, false );
   document.addEventListener( 'webkitpointerlockerror', pointerlockerror, false );
 
-  instructions.addEventListener('click', function(){
-
+  instructions.addEventListener('click', () => {
     instructions.style.display = 'none';
 
     // Ask the browser to lock the pointer
     element.requestPointerLock = element.requestPointerLock || element.mozRequestPointerLock || element.webkitRequestPointerLock;
 
     if ( /Firefox/i.test( navigator.userAgent ) ) {
-
-      var fullscreenchange = function () {
-
+      const fullscreenchange = () => {
         if ( document.fullscreenElement === element || document.mozFullscreenElement === element || document.mozFullScreenElement === element ) {
-
           document.removeEventListener( 'fullscreenchange', fullscreenchange );
           document.removeEventListener( 'mozfullscreenchange', fullscreenchange );
-
           element.requestPointerLock();
         }
-
       };
 
       document.addEventListener( 'fullscreenchange', fullscreenchange, false );
       document.addEventListener( 'mozfullscreenchange', fullscreenchange, false );
 
       element.requestFullscreen = element.requestFullscreen || element.mozRequestFullscreen || element.mozRequestFullScreen || element.webkitRequestFullscreen;
-
       element.requestFullscreen();
-
     } else {
-
       element.requestPointerLock();
-
     }
-
   }, false);
 
+  // instructions.addEventListener('click', function(){
+  //
+  //   instructions.style.display = 'none';
+  //
+  //   // Ask the browser to lock the pointer
+  //   element.requestPointerLock = element.requestPointerLock || element.mozRequestPointerLock || element.webkitRequestPointerLock;
+  //
+  //   if ( /Firefox/i.test( navigator.userAgent ) ) {
+  //
+  //     var fullscreenchange = function () {
+  //
+  //       if ( document.fullscreenElement === element || document.mozFullscreenElement === element || document.mozFullScreenElement === element ) {
+  //
+  //         document.removeEventListener( 'fullscreenchange', fullscreenchange );
+  //         document.removeEventListener( 'mozfullscreenchange', fullscreenchange );
+  //
+  //         element.requestPointerLock();
+  //       }
+  //
+  //     };
+  //
+  //     document.addEventListener( 'fullscreenchange', fullscreenchange, false );
+  //     document.addEventListener( 'mozfullscreenchange', fullscreenchange, false );
+  //
+  //     element.requestFullscreen = element.requestFullscreen || element.mozRequestFullscreen || element.mozRequestFullScreen || element.webkitRequestFullscreen;
+  //
+  //     element.requestFullscreen();
+  //
+  //   } else {
+  //
+  //     element.requestPointerLock();
+  //
+  //   }
+  //
+  // }, false);
+
 } else {
-
   instructions.innerHTML = 'Your browser doesn\'t seem to support Pointer Lock API';
-
 }
 
-init();
-animate();
+let controlsEnabled = false;
 
-var controlsEnabled = false;
+let moveForward = false;
+let moveBackward = false;
+let moveLeft = false;
+let moveRight = false;
 
-var moveForward = false;
-var moveBackward = false;
-var moveLeft = false;
-var moveRight = false;
+let prevTime = performance.now();
+let velocity = new THREE.Vector3();
 
-var prevTime = performance.now();
-var velocity = new THREE.Vector3();
-
-function init() {
-
+const init = () => {
   camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 1, 1000 );
 
   scene = new THREE.Scene();
   scene.fog = new THREE.Fog( 0x000000, 0, 750 );
 
-  var light = new THREE.HemisphereLight( 0xeeeeff, 0x777788, 0.89 );
+  let light = new THREE.HemisphereLight( 0xeeeeff, 0x777788, 0.89 );
   light.position.set( 0.5, 20, 0.75 );
   scene.add( light );
 
   controls = new THREE.PointerLockControls( camera );
   scene.add( controls.getObject() );
 
-  for (var i = 0; i <= 10; i++) {
-    var orb = new Orb(
+  for (let i = 0; i <= 10; i++) {
+    let orb = new Orb(
       getRandomPoint(),
       getRandomColor()
     );
     orbs.push(orb);
   }
 
-  var onKeyDown = function ( event ) {
-
+  const onKeyDown = event => {
     switch ( event.keyCode ) {
 
     case 38: // up
@@ -169,11 +172,9 @@ function init() {
       break;
 
     }
-
   };
 
-  var onKeyUp = function ( event ) {
-
+  const onKeyUp = event => {
     switch( event.keyCode ) {
 
     case 38: // up
@@ -197,7 +198,6 @@ function init() {
       break;
 
     }
-
   };
 
   document.addEventListener( 'keydown', onKeyDown, false );
@@ -206,18 +206,15 @@ function init() {
   raycaster = new THREE.Raycaster( new THREE.Vector3(), new THREE.Vector3( 0, -1, 0 ), 0, 10 );
 
   // floor
-
   geometry = new THREE.PlaneGeometry( 2000, 2000, 100, 100 );
   geometry.rotateX(-Math.PI / 2 );
 
   //vorm van vloer
-  for ( var i = 0, l = geometry.vertices.length; i < l; i++ ) {
-
-    var vertex = geometry.vertices[ i ];
+  for (let i = 0, l = geometry.vertices.length; i < l; i++) {
+    let vertex = geometry.vertices[ i ];
     vertex.x += Math.random() * 20 - 10;
     vertex.y += Math.random() * 10;
     vertex.z += Math.random() * 20 - 10;
-
   }
 
   material = new THREE.MeshPhongMaterial( { color: 0x444444, specular: 0x444444, shininess: 30 } );
@@ -225,12 +222,11 @@ function init() {
   mesh = new THREE.Mesh( geometry, material );
   scene.add( mesh );
 
-  orbs.forEach(function(e) {
+  orbs.forEach(e => {
     scene.add(e.render(camera));
   });
 
   //
-
   renderer = new THREE.WebGLRenderer();
   renderer.setClearColor( 0x000000 );
   renderer.setPixelRatio( window.devicePixelRatio );
@@ -238,35 +234,31 @@ function init() {
   document.body.appendChild( renderer.domElement );
 
   //
-
   window.addEventListener( 'resize', onWindowResize, false );
+};
 
-}
-
-function onWindowResize() {
-
+const onWindowResize = () => {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
 
   renderer.setSize( window.innerWidth, window.innerHeight );
-}
+};
 
-function update(){
-  orbs.forEach(function(e) {
+const update = () => {
+  orbs.forEach(e => {
     e.update(controls);
   });
-}
+};
 
-function animate() {
-
+const animate = () => {
   requestAnimationFrame( animate );
 
   if ( controlsEnabled ) {
     raycaster.ray.origin.copy( controls.getObject().position );
     raycaster.ray.origin.y -= 10;
 
-    var time = performance.now();
-    var delta = ( time - prevTime ) / 1000;
+    let time = performance.now();
+    let delta = ( time - prevTime ) / 1000;
 
     velocity.x -= velocity.x * 5.0 * delta;
     velocity.z -= velocity.z * 5.0 * delta;
@@ -287,37 +279,35 @@ function animate() {
     controls.getObject().translateZ( velocity.z * delta );
 
     prevTime = time;
-
   }
 
   renderer.render( scene, camera );
   update();
+};
 
-}
-
-function getRandomPoint() {
-
+const getRandomPoint = () => {
   return {
     x: randomBetween(-300, 300),
     y: randomBetween(10, 60),
     z: randomBetween(-300, 300)
   };
+};
 
-}
-
-function randomBetween(min, max){
-
+const randomBetween = (min, max) => {
   let rand = min + Math.random() * (max-min);
   if(rand) rand = Math.round(rand);
 
   return rand;
-}
+};
 
-function getRandomColor() {
-  var letters = '0123456789ABCDEF'.split('');
-  var color = '0x';
-  for (var i = 0; i < 6; i++ ) {
+const getRandomColor = () => {
+  let letters = '0123456789ABCDEF'.split('');
+  let color = '0x';
+  for (let i = 0; i < 6; i++ ) {
     color += letters[Math.floor(Math.random() * 16)];
   }
   return color;
-}
+};
+
+init();
+animate();

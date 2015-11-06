@@ -15,7 +15,7 @@ export default class Orb {
     this.obj.shape.children[1].material.uniforms.viewVector.value = new THREE.Vector3().subVectors(controls.getObject().position, this.obj.shape.children[2].position );
     this.obj.shape.children[2].material.uniforms.viewVector.value = new THREE.Vector3().subVectors(controls.getObject().position, this.obj.shape.children[2].position );
 
-    var time = performance.now();
+    let time = performance.now();
     let sineScale = 1 - (Math.sin(time/800 - 1)/8);
 
     this.obj.shape.children[0].intensity = sineScale*2;
@@ -27,15 +27,14 @@ export default class Orb {
 
     let {x, y, z} = this.position;
 
-    var group = new THREE.Object3D();//create an empty container
+    let group = new THREE.Object3D();//create an empty container
 
-    var outerBall;
-    var middleBall;
-    var light1;
+    let outerBall;
+    let middleBall;
+    let light1;
 
     // Licht bal
-
-    var sphere = new THREE.SphereGeometry( 3, 30, 30 );
+    let sphere = new THREE.SphereGeometry( 3, 30, 30 );
 
     light1 = new THREE.PointLight( parseInt(this.color, 16), 3, 30 );
     light1.add( new THREE.Mesh( sphere, new THREE.MeshBasicMaterial( { color: parseInt(this.LightenColor(this.color, 50), 16)})));
@@ -47,10 +46,9 @@ export default class Orb {
     group.add(light1);//add a mesh with geometry to it
 
     // Buitenste mesh
+    let geometry = new THREE.SphereGeometry(8, 30, 30);
 
-    var geometry = new THREE.SphereGeometry(8, 30, 30);
-
-    var material = new THREE.ShaderMaterial({
+    let material = new THREE.ShaderMaterial({
       uniforms: {
         'c': {type: 'f', value: 1 },
         'p': {type: 'f', value: 1 },
@@ -100,11 +98,10 @@ export default class Orb {
     this.obj.shape = group;
 
     return this.obj.shape;
-
   }
 
   LightenColor(color, percent) {
-    var num = parseInt(color, 16),
+    let num = parseInt(color, 16),
       amt = Math.round(2.55 * percent),
       R = (num >> 16) + amt,
       B = (num >> 8 & 0x00FF) + amt,
