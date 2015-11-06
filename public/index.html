@@ -10,7 +10,7 @@
 
       <div id="instructions">
         <div>
-          <span style="font-size:40px">Click to play</span>
+          <span>Click to play</span>
           <br />
           <span>(Z, Q, S, D = Move, MOUSE = Look around)</span>
         </div>
@@ -38,11 +38,10 @@
       void main()
       {
         vec3 glow = glowColor * intensity;
-          gl_FragColor = vec4(glow, 1.0 );
+        gl_FragColor = vec4(glow, 1.0 );
       }
     </script>
   <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/three.js/r73/three.min.js"></script>
-
-  <script src="/js/script.js"></script>
+	<script src="/js/script.js"></script>
 </body>
 </html>
