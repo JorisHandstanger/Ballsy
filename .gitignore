@@ -1,3 +1,13 @@
 /node_modules
-.env
 npm-debug.log
+
+.env
+/public/css
+/public/js
+
+.DS_Store
+Thumbs.db
+
+public/js/script.js
+
+public/css/style.css
