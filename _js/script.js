@@ -2,13 +2,13 @@
 
 require('./modules/controls');
 
-import * from './helpers/util';
+import {getRandomPoint, randomBetween, getRandomColor} from './helpers/util';
 import Orb from './modules/Orb';
 
 let camera, scene, renderer, composer;
 
 let geometry, material, mesh;
-let controls;
+let controls, stats, element;
 
 let orbs = [];
 
@@ -21,10 +21,10 @@ let instructions = document.getElementById( 'instructions' );
 let havePointerLock = 'pointerLockElement' in document || 'mozPointerLockElement' in document || 'webkitPointerLockElement' in document;
 
 if ( havePointerLock ) {
-  let element = document.body;
+  element = document.body;
 
   // Performance monitor voor development
-  let stats = new Stats();
+  stats = new Stats();
   stats.setMode( 0 ); // 0: fps, 1: ms, 2: mb
 
   stats.domElement.style.position = 'absolute';
@@ -259,32 +259,6 @@ const onWindowResize = () => {
   camera.updateProjectionMatrix();
 
   renderer.setSize( window.innerWidth, window.innerHeight );
-};
-
-const getRandomPoint = () => {
-  return {
-    x: randomBetween(-300, 300),
-    y: randomBetween(10, 60),
-    z: randomBetween(-300, 300)
-  };
-};
-
-const randomBetween = (min, max) => {
-  let rand = min + Math.random() * (max-min);
-  if(rand) rand = Math.round(rand);
-
-  return rand;
-};
-
-const getRandomColor = () => {
-  let letters = '0123456789ABCDEF'.split('');
-  let color = '0x';
-
-  for (let i = 0; i < 6; i++ ) {
-    color += letters[Math.floor(Math.random() * 16)];
-  }
-
-  return color;
 };
 
 const pointerlockchange = () => {
