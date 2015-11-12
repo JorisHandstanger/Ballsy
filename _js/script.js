@@ -2,6 +2,7 @@
 
 require('./modules/controls');
 
+import * from './helpers/util';
 import Orb from './modules/Orb';
 
 let camera, scene, renderer, composer;
