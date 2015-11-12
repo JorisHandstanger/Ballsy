@@ -22,31 +22,8 @@ let havePointerLock = 'pointerLockElement' in document || 'mozPointerLockElement
 if ( havePointerLock ) {
   let element = document.body;
 
-  let pointerlockchange = function () {
-
-    if ( document.pointerLockElement === element || document.mozPointerLockElement === element || document.webkitPointerLockElement === element ) {
-      controlsEnabled = true;
-      controls.enabled = true;
-
-      blocker.style.display = 'none';
-    } else {
-      controls.enabled = false;
-
-      blocker.style.display = '-webkit-box';
-      blocker.style.display = '-moz-box';
-      blocker.style.display = 'box';
-
-      instructions.style.display = '';
-    }
-
-  };
-
-  const pointerlockerror = () => {
-    instructions.style.display = '';
-  };
-
   // Performance monitor voor development
-  var stats = new Stats();
+  let stats = new Stats();
   stats.setMode( 0 ); // 0: fps, 1: ms, 2: mb
 
   stats.domElement.style.position = 'absolute';
@@ -125,58 +102,6 @@ const init = () => {
     orbs.push(orb);
   }
 
-  const onKeyDown = event => {
-    switch ( event.keyCode ) {
-
-    case 38: // up
-    case 90: // z
-      moveForward = true;
-      break;
-
-    case 37: // left
-    case 81: // q
-      moveLeft = true;
-      break;
-
-    case 40: // down
-    case 83: // s
-      moveBackward = true;
-      break;
-
-    case 39: // right
-    case 68: // d
-      moveRight = true;
-      break;
-
-    }
-  };
-
-  const onKeyUp = event => {
-    switch( event.keyCode ) {
-
-    case 38: // up
-    case 90: // z
-      moveForward = false;
-      break;
-
-    case 37: // left
-    case 81: // q
-      moveLeft = false;
-      break;
-
-    case 40: // down
-    case 83: // s
-      moveBackward = false;
-      break;
-
-    case 39: // right
-    case 68: // d
-      moveRight = false;
-      break;
-
-    }
-  };
-
   document.addEventListener( 'keydown', onKeyDown, false );
   document.addEventListener( 'keyup', onKeyUp, false );
 
@@ -195,13 +120,12 @@ const init = () => {
   mesh = new THREE.Mesh( geometry, material );
   scene.add( mesh );
 
-  var grid = new THREE.GridHelper(1000, 30);
+  let grid = new THREE.GridHelper(1000, 30);
   grid.setColors( new THREE.Color(0x333333), new THREE.Color(0x333333) );
   grid.position.y = 1;
   scene.add(grid);
 
   // Renderen van de orbs
-
   orbs.forEach(e => {
     scene.add(e.render());
   });
@@ -218,26 +142,19 @@ const init = () => {
 
   composer = new THREE.EffectComposer(renderer);
 
-  var renderPass = new THREE.RenderPass(scene, camera);
+  let renderPass = new THREE.RenderPass(scene, camera);
   composer.addPass(renderPass);
 
   // Bloom pass voor glow
 
-  var bloomPass = new THREE.BloomPass(2, 20, 3, 256); // (strength, kernelSize, sigma, resolution)
+  let bloomPass = new THREE.BloomPass(2, 20, 3, 256); // (strength, kernelSize, sigma, resolution)
   composer.addPass(bloomPass);
-  var effectCopy = new THREE.ShaderPass(THREE.CopyShader);
+  let effectCopy = new THREE.ShaderPass(THREE.CopyShader);
   effectCopy.renderToScreen = true;
   composer.addPass(effectCopy);
 
   window.addEventListener( 'resize', onWindowResize, false );
 
-};
-
-const onWindowResize = () => {
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
-
-  renderer.setSize( window.innerWidth, window.innerHeight );
 };
 
 const animate = () => {
@@ -284,27 +201,81 @@ const animate = () => {
   stats.end();
 };
 
-const getRandomPoint = () => {
+const onKeyDown = event => {
+  switch ( event.keyCode ) {
 
+  case 38: // up
+  case 90: // z
+    moveForward = true;
+    break;
+
+  case 37: // left
+  case 81: // q
+    moveLeft = true;
+    break;
+
+  case 40: // down
+  case 83: // s
+    moveBackward = true;
+    break;
+
+  case 39: // right
+  case 68: // d
+    moveRight = true;
+    break;
+
+  }
+};
+
+const onKeyUp = event => {
+  switch( event.keyCode ) {
+
+  case 38: // up
+  case 90: // z
+    moveForward = false;
+    break;
+
+  case 37: // left
+  case 81: // q
+    moveLeft = false;
+    break;
+
+  case 40: // down
+  case 83: // s
+    moveBackward = false;
+    break;
+
+  case 39: // right
+  case 68: // d
+    moveRight = false;
+    break;
+
+  }
+};
+
+const onWindowResize = () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+
+  renderer.setSize( window.innerWidth, window.innerHeight );
+};
+
+const getRandomPoint = () => {
   return {
     x: randomBetween(-300, 300),
     y: randomBetween(10, 60),
     z: randomBetween(-300, 300)
   };
-
 };
 
 const randomBetween = (min, max) => {
-
   let rand = min + Math.random() * (max-min);
   if(rand) rand = Math.round(rand);
 
   return rand;
-
 };
 
 const getRandomColor = () => {
-
   let letters = '0123456789ABCDEF'.split('');
   let color = '0x';
 
@@ -313,7 +284,24 @@ const getRandomColor = () => {
   }
 
   return color;
+};
 
+const pointerlockchange = () => {
+  if ( document.pointerLockElement === element || document.mozPointerLockElement === element || document.webkitPointerLockElement === element ) {
+    controlsEnabled = true;
+    controls.enabled = true;
+    blocker.style.display = 'none';
+  } else {
+    controls.enabled = false;
+    blocker.style.display = '-webkit-box';
+    blocker.style.display = '-moz-box';
+    blocker.style.display = 'box';
+    instructions.style.display = '';
+  }
+};
+
+const pointerlockerror = () => {
+  instructions.style.display = '';
 };
 
 init();
