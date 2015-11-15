@@ -1,8 +1,7 @@
 'use strict';
 
 require('./modules/controls');
-
-import {getRandomPoint, randomBetween, getRandomColor} from './helpers/util';
+import {getRandomPoint, getRandomColor} from './helpers/util';
 import Orb from './modules/Orb';
 
 let camera, scene, renderer, composer;
@@ -11,14 +10,49 @@ let geometry, material, mesh;
 let controls, stats, element;
 
 let orbs = [];
+let objects = [];
 
 let raycaster;
 
 let blocker = document.getElementById( 'blocker' );
+let crosshairs = document.getElementById( 'crosshairs' );
 let instructions = document.getElementById( 'instructions' );
 
+let controlsEnabled = false;
+
+let moveForward = false;
+let moveBackward = false;
+let moveLeft = false;
+let moveRight = false;
+
+let prevTime = performance.now();
+let velocity = new THREE.Vector3();
+
 // http://www.html5rocks.com/en/tutorials/pointerlock/intro/
+
 let havePointerLock = 'pointerLockElement' in document || 'mozPointerLockElement' in document || 'webkitPointerLockElement' in document;
+
+const pointerlockchange = () => {
+  if ( document.pointerLockElement === element || document.mozPointerLockElement === element || document.webkitPointerLockElement === element ) {
+    controlsEnabled = true;
+    controls.enabled = true;
+
+    blocker.style.display = 'none';
+    crosshairs.style.display = 'block';
+  } else {
+    controls.enabled = false;
+    blocker.style.display = '-webkit-box';
+    blocker.style.display = '-moz-box';
+    blocker.style.display = 'box';
+    instructions.style.display = '';
+    crosshairs.style.display = 'none';
+  }
+};
+
+const pointerlockerror = () => {
+  instructions.style.display = '';
+  crosshairs.style.display = 'block';
+};
 
 if ( havePointerLock ) {
   element = document.body;
@@ -71,16 +105,6 @@ if ( havePointerLock ) {
   instructions.innerHTML = 'Your browser doesn\'t seem to support Pointer Lock API';
 }
 
-let controlsEnabled = false;
-
-let moveForward = false;
-let moveBackward = false;
-let moveLeft = false;
-let moveRight = false;
-
-let prevTime = performance.now();
-let velocity = new THREE.Vector3();
-
 const init = () => {
 
   camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 1, 1000 );
@@ -97,6 +121,7 @@ const init = () => {
 
   for (let i = 0; i <= 50; i++) {
     let orb = new Orb(
+      i,
       getRandomPoint(),
       getRandomColor()
     );
@@ -106,7 +131,7 @@ const init = () => {
   document.addEventListener( 'keydown', onKeyDown, false );
   document.addEventListener( 'keyup', onKeyUp, false );
 
-  raycaster = new THREE.Raycaster( new THREE.Vector3(), new THREE.Vector3( 0, -1, 0 ), 0, 10 );
+  raycaster = new THREE.Raycaster();
 
   // floor
   geometry = new THREE.PlaneGeometry( 2000, 2000 );
@@ -129,6 +154,7 @@ const init = () => {
   // Renderen van de orbs
   orbs.forEach(e => {
     scene.add(e.render());
+    objects.push(e.obj.shape);
   });
 
   //
@@ -165,8 +191,6 @@ const animate = () => {
   stats.begin(); // Begin van te monitoren code
 
   if ( controlsEnabled ) {
-    raycaster.ray.origin.copy( controls.getObject().position );
-    raycaster.ray.origin.y -= 10;
 
     let time = performance.now();
     let delta = ( time - prevTime ) / 1000;
@@ -198,6 +222,21 @@ const animate = () => {
   orbs.forEach(e => {
     e.update();
   });
+
+  raycaster.setFromCamera( {x: 0, y: 0}, camera );
+
+  let intersects = raycaster.intersectObjects( objects, true );
+
+  for ( var i = 0; i < intersects.length; i++ ) {
+
+    if(orbs[intersects[i].object.name] !== undefined){
+      let orb = orbs[intersects[i].object.name];
+
+      if(orb.health > 0 && orb.health !== undefined){
+        orb.health -= 2;
+      }
+    }
+  }
 
   stats.end();
 };
@@ -259,24 +298,6 @@ const onWindowResize = () => {
   camera.updateProjectionMatrix();
 
   renderer.setSize( window.innerWidth, window.innerHeight );
-};
-
-const pointerlockchange = () => {
-  if ( document.pointerLockElement === element || document.mozPointerLockElement === element || document.webkitPointerLockElement === element ) {
-    controlsEnabled = true;
-    controls.enabled = true;
-    blocker.style.display = 'none';
-  } else {
-    controls.enabled = false;
-    blocker.style.display = '-webkit-box';
-    blocker.style.display = '-moz-box';
-    blocker.style.display = 'box';
-    instructions.style.display = '';
-  }
-};
-
-const pointerlockerror = () => {
-  instructions.style.display = '';
 };
 
 init();

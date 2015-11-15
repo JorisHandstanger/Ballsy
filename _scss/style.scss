@@ -39,4 +39,23 @@ body {
   span {
     font-size: 40px;
   }
+
+  .inst {
+    font-size: 20px;
+  }
+}
+
+#crosshairs {
+  display: none;
+  background-color: transparent;
+  border: 2px solid #fff;
+  width: 10px;
+  height: 10px;
+  left: 50%;
+  margin-left: -5px;
+  top: 50%;
+  margin-top: -5px;
+  position: absolute;
+  z-index: 10;
+  border-radius: 5px;
 }
