@@ -1,55 +1,27 @@
 'use strict';
 
-import 'array.from';
-
-export const html = (strings, ...values) => {
-
-  let str = '';
-
-  if(Array.isArray(strings)){
-    for(let i = 0; i < strings.length; i++){
-      if(strings[i]) str += strings[i];
-      if(values[i]) str += values[i];
-    }
-  }else{
-    str = strings;
-  }
-
-  let doc = new DOMParser().parseFromString(str.trim(), 'text/html');
-
-  return doc.body.firstChild;
-
+export const getRandomPoint = () => {
+  return {
+    x: randomBetween(-300, 300),
+    y: randomBetween(10, 60),
+    z: randomBetween(-300, 300)
+  };
 };
 
-export const prepend = ($parent, $element) => {
-  let $first = $parent.children[0];
-  $parent.insertBefore($element, $first);
+export const randomBetween = (min, max) => {
+  let rand = min + Math.random() * (max-min);
+  if(rand) rand = Math.round(rand);
+
+  return rand;
 };
 
-export const $ = selector => {
+export const getRandomColor = () => {
+  let letters = '0123456789ABCDEF'.split('');
+  let color = '0x';
 
-  let result;
-
-  if(selector === 'body'){
-    return document.body;
-  }else if(selector === 'head'){
-    return document.head;
-  }else if(/^[\#.]?[\w-]+$/.test(selector)){
-
-    if(selector[0] === '#'){
-      return document.getElementById(selector.slice(1));
-    }else if(selector[0] === '.'){
-      result = document.getElementsByClassName(selector.slice(1));
-    }else{
-      result = document.getElementsByTagName(selector);
-    }
-  }else{
-    result = document.querySelectorAll(selector);
+  for (let i = 0; i < 6; i++ ) {
+    color += letters[Math.floor(Math.random() * 16)];
   }
 
-
-  let elements = [...result];
-  if(elements.length === 1) return elements[0];
-  return elements;
-
+  return color;
 };

@@ -1,52 +1,64 @@
 'use strict';
 
 require('./modules/controls');
-
+import {getRandomPoint, getRandomColor} from './helpers/util';
 import Orb from './modules/Orb';
 
 let camera, scene, renderer, composer;
 
 let geometry, material, mesh;
-let controls;
+let controls, stats, element;
 
 let orbs = [];
+let objects = [];
 
 let raycaster;
 
 let blocker = document.getElementById( 'blocker' );
+let crosshairs = document.getElementById( 'crosshairs' );
 let instructions = document.getElementById( 'instructions' );
 
+let controlsEnabled = false;
+
+let moveForward = false;
+let moveBackward = false;
+let moveLeft = false;
+let moveRight = false;
+
+let prevTime = performance.now();
+let velocity = new THREE.Vector3();
+
 // http://www.html5rocks.com/en/tutorials/pointerlock/intro/
+
 let havePointerLock = 'pointerLockElement' in document || 'mozPointerLockElement' in document || 'webkitPointerLockElement' in document;
 
-if ( havePointerLock ) {
-  let element = document.body;
+const pointerlockchange = () => {
+  if ( document.pointerLockElement === element || document.mozPointerLockElement === element || document.webkitPointerLockElement === element ) {
+    controlsEnabled = true;
+    controls.enabled = true;
 
-  let pointerlockchange = function () {
-
-    if ( document.pointerLockElement === element || document.mozPointerLockElement === element || document.webkitPointerLockElement === element ) {
-      controlsEnabled = true;
-      controls.enabled = true;
-
-      blocker.style.display = 'none';
-    } else {
-      controls.enabled = false;
-
-      blocker.style.display = '-webkit-box';
-      blocker.style.display = '-moz-box';
-      blocker.style.display = 'box';
-
-      instructions.style.display = '';
-    }
-
-  };
-
-  const pointerlockerror = () => {
+    blocker.style.display = 'none';
+    crosshairs.style.display = 'block';
+  } else {
+    controls.enabled = false;
+    blocker.style.display = '-webkit-box';
+    blocker.style.display = '-moz-box';
+    blocker.style.display = 'box';
     instructions.style.display = '';
-  };
+    crosshairs.style.display = 'none';
+  }
+};
+
+const pointerlockerror = () => {
+  instructions.style.display = '';
+  crosshairs.style.display = 'block';
+};
+
+if ( havePointerLock ) {
+  element = document.body;
 
   // Performance monitor voor development
-  var stats = new Stats();
+  stats = new Stats();
   stats.setMode( 0 ); // 0: fps, 1: ms, 2: mb
 
   stats.domElement.style.position = 'absolute';
@@ -93,16 +105,6 @@ if ( havePointerLock ) {
   instructions.innerHTML = 'Your browser doesn\'t seem to support Pointer Lock API';
 }
 
-let controlsEnabled = false;
-
-let moveForward = false;
-let moveBackward = false;
-let moveLeft = false;
-let moveRight = false;
-
-let prevTime = performance.now();
-let velocity = new THREE.Vector3();
-
 const init = () => {
 
   camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 1, 1000 );
@@ -119,68 +121,17 @@ const init = () => {
 
   for (let i = 0; i <= 50; i++) {
     let orb = new Orb(
+      i,
       getRandomPoint(),
       getRandomColor()
     );
     orbs.push(orb);
   }
 
-  const onKeyDown = event => {
-    switch ( event.keyCode ) {
-
-    case 38: // up
-    case 90: // z
-      moveForward = true;
-      break;
-
-    case 37: // left
-    case 81: // q
-      moveLeft = true;
-      break;
-
-    case 40: // down
-    case 83: // s
-      moveBackward = true;
-      break;
-
-    case 39: // right
-    case 68: // d
-      moveRight = true;
-      break;
-
-    }
-  };
-
-  const onKeyUp = event => {
-    switch( event.keyCode ) {
-
-    case 38: // up
-    case 90: // z
-      moveForward = false;
-      break;
-
-    case 37: // left
-    case 81: // q
-      moveLeft = false;
-      break;
-
-    case 40: // down
-    case 83: // s
-      moveBackward = false;
-      break;
-
-    case 39: // right
-    case 68: // d
-      moveRight = false;
-      break;
-
-    }
-  };
-
   document.addEventListener( 'keydown', onKeyDown, false );
   document.addEventListener( 'keyup', onKeyUp, false );
 
-  raycaster = new THREE.Raycaster( new THREE.Vector3(), new THREE.Vector3( 0, -1, 0 ), 0, 10 );
+  raycaster = new THREE.Raycaster();
 
   // floor
   geometry = new THREE.PlaneGeometry( 2000, 2000 );
@@ -195,15 +146,15 @@ const init = () => {
   mesh = new THREE.Mesh( geometry, material );
   scene.add( mesh );
 
-  var grid = new THREE.GridHelper(1000, 30);
+  let grid = new THREE.GridHelper(1000, 30);
   grid.setColors( new THREE.Color(0x333333), new THREE.Color(0x333333) );
   grid.position.y = 1;
   scene.add(grid);
 
   // Renderen van de orbs
-
   orbs.forEach(e => {
     scene.add(e.render());
+    objects.push(e.obj.shape);
   });
 
   //
@@ -218,26 +169,19 @@ const init = () => {
 
   composer = new THREE.EffectComposer(renderer);
 
-  var renderPass = new THREE.RenderPass(scene, camera);
+  let renderPass = new THREE.RenderPass(scene, camera);
   composer.addPass(renderPass);
 
   // Bloom pass voor glow
 
-  var bloomPass = new THREE.BloomPass(2, 20, 3, 256); // (strength, kernelSize, sigma, resolution)
+  let bloomPass = new THREE.BloomPass(2, 20, 3, 256); // (strength, kernelSize, sigma, resolution)
   composer.addPass(bloomPass);
-  var effectCopy = new THREE.ShaderPass(THREE.CopyShader);
+  let effectCopy = new THREE.ShaderPass(THREE.CopyShader);
   effectCopy.renderToScreen = true;
   composer.addPass(effectCopy);
 
   window.addEventListener( 'resize', onWindowResize, false );
 
-};
-
-const onWindowResize = () => {
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
-
-  renderer.setSize( window.innerWidth, window.innerHeight );
 };
 
 const animate = () => {
@@ -247,8 +191,6 @@ const animate = () => {
   stats.begin(); // Begin van te monitoren code
 
   if ( controlsEnabled ) {
-    raycaster.ray.origin.copy( controls.getObject().position );
-    raycaster.ray.origin.y -= 10;
 
     let time = performance.now();
     let delta = ( time - prevTime ) / 1000;
@@ -281,39 +223,81 @@ const animate = () => {
     e.update();
   });
 
+  raycaster.setFromCamera( {x: 0, y: 0}, camera );
+
+  let intersects = raycaster.intersectObjects( objects, true );
+
+  for ( var i = 0; i < intersects.length; i++ ) {
+
+    if(orbs[intersects[i].object.name] !== undefined){
+      let orb = orbs[intersects[i].object.name];
+
+      if(orb.health > 0 && orb.health !== undefined){
+        orb.health -= 2;
+      }
+    }
+  }
+
   stats.end();
 };
 
-const getRandomPoint = () => {
+const onKeyDown = event => {
+  switch ( event.keyCode ) {
 
-  return {
-    x: randomBetween(-300, 300),
-    y: randomBetween(10, 60),
-    z: randomBetween(-300, 300)
-  };
+  case 38: // up
+  case 90: // z
+    moveForward = true;
+    break;
 
-};
+  case 37: // left
+  case 81: // q
+    moveLeft = true;
+    break;
 
-const randomBetween = (min, max) => {
+  case 40: // down
+  case 83: // s
+    moveBackward = true;
+    break;
 
-  let rand = min + Math.random() * (max-min);
-  if(rand) rand = Math.round(rand);
+  case 39: // right
+  case 68: // d
+    moveRight = true;
+    break;
 
-  return rand;
-
-};
-
-const getRandomColor = () => {
-
-  let letters = '0123456789ABCDEF'.split('');
-  let color = '0x';
-
-  for (let i = 0; i < 6; i++ ) {
-    color += letters[Math.floor(Math.random() * 16)];
   }
+};
 
-  return color;
+const onKeyUp = event => {
+  switch( event.keyCode ) {
 
+  case 38: // up
+  case 90: // z
+    moveForward = false;
+    break;
+
+  case 37: // left
+  case 81: // q
+    moveLeft = false;
+    break;
+
+  case 40: // down
+  case 83: // s
+    moveBackward = false;
+    break;
+
+  case 39: // right
+  case 68: // d
+    moveRight = false;
+    break;
+
+  }
+};
+
+const onWindowResize = () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+
+  renderer.setSize( window.innerWidth, window.innerHeight );
 };
 
 init();

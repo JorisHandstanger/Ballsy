@@ -2,10 +2,13 @@
 
 export default class Orb {
 
-  constructor(position, color){
+  constructor(id, position, color){
 
+    this.id = id;
     this.color = color;
     this.position = position;
+
+    this.health = 100;
 
     this.obj = {};
 
@@ -16,8 +19,10 @@ export default class Orb {
     let time = performance.now();
     let sineScale = 1 - (Math.sin(time/800 - 1)/8);
 
-    this.obj.shape.children[0].intensity = sineScale*2;
+    this.obj.shape.children[0].intensity = (sineScale*2);
     this.obj.shape.children[1].scale.set(sineScale, sineScale, sineScale);
+
+    this.obj.shape.children[1].material.opacity = this.health/100;
 
   }
 
@@ -38,6 +43,7 @@ export default class Orb {
       color: parseInt(this.LightenColor(this.color, 50), 16)
     })));
     light1.position.set(x, y, z);
+    light1.name = this.id;
 
     group.add(light1);
 
@@ -52,6 +58,8 @@ export default class Orb {
 
     outerBall = new THREE.Mesh(geometry.clone(), material.clone());
     outerBall.position.set(x, y, z);
+
+    outerBall.name = this.id;
 
     group.add(outerBall);
 
