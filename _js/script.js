@@ -2,6 +2,7 @@
 
 require('./modules/controls');
 import {getRandomPoint, getRandomColor} from './helpers/util';
+import {deadzone} from './helpers/controller';
 import Orb from './modules/Orb';
 
 let camera, scene, renderer, composer;
@@ -28,7 +29,7 @@ let moveRight = false;
 let prevTime = performance.now();
 let velocity = new THREE.Vector3();
 
-// http://www.html5rocks.com/en/tutorials/pointerlock/intro/
+//http://www.html5rocks.com/en/tutorials/pointerlock/intro/
 
 let havePointerLock = 'pointerLockElement' in document || 'mozPointerLockElement' in document || 'webkitPointerLockElement' in document;
 
@@ -105,8 +106,21 @@ if ( havePointerLock ) {
   instructions.innerHTML = 'Your browser doesn\'t seem to support Pointer Lock API';
 }
 
-const init = () => {
+const gamepadControls = () => {
+  let gamepad = navigator.getGamepads()[0];
+  let joyX = deadzone(gamepad.axes[0], 0.25);
+  let joyY = deadzone(gamepad.axes[1], 0.25);
+  if (Math.abs(joyX) > 0) {
+    console.log('je bewoog naar links op een value van', joyX);
+  } else if (Math.abs(joyX) < 0) {
+    console.log('je bewoog naar rechts op een value van', joyX);
+  } else if (Math.abs(joyX) === 0 || Math.abs(joyX) === -0) {
+    console.log('je staat stil');
+  }
+  window.requestAnimationFrame(gamepadControls);
+};
 
+const init = () => {
   camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 1, 1000 );
 
   scene = new THREE.Scene();
@@ -159,7 +173,7 @@ const init = () => {
 
   //
   renderer = new THREE.WebGLRenderer();
-  renderer.setClearColor( 0x000000 );
+  renderer.setClearColor(0x000000);
   renderer.setPixelRatio( window.devicePixelRatio );
   renderer.setSize( window.innerWidth, window.innerHeight );
   document.body.appendChild( renderer.domElement );
@@ -181,7 +195,7 @@ const init = () => {
   composer.addPass(effectCopy);
 
   window.addEventListener( 'resize', onWindowResize, false );
-
+  window.addEventListener('gamepadconnected', gamepadControls);
 };
 
 const animate = () => {
@@ -269,7 +283,6 @@ const onKeyDown = event => {
 
 const onKeyUp = event => {
   switch( event.keyCode ) {
-
   case 38: // up
   case 90: // z
     moveForward = false;
@@ -289,7 +302,6 @@ const onKeyUp = event => {
   case 68: // d
     moveRight = false;
     break;
-
   }
 };
 
