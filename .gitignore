@@ -2,7 +2,6 @@
 npm-debug.log
 
 .env
-/public/css
 
 .DS_Store
 Thumbs.db
