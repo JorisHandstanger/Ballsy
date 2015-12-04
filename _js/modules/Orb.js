@@ -50,7 +50,7 @@ export default class Orb {
     // Buitenste mesh
     let geometry = new THREE.SphereGeometry(8, 30, 30);
 
-    var material = new THREE.MeshLambertMaterial({
+    let material = new THREE.MeshLambertMaterial({
       color: parseInt(this.color),
       transparent: true,
       opacity: 0.3

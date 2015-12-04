@@ -110,12 +110,23 @@ const gamepadControls = () => {
   let gamepad = navigator.getGamepads()[0];
   let joyX = deadzone(gamepad.axes[0], 0.25);
   let joyY = deadzone(gamepad.axes[1], 0.25);
-  if (Math.abs(joyX) > 0) {
-    console.log('je bewoog naar links op een value van', joyX);
-  } else if (Math.abs(joyX) < 0) {
-    console.log('je bewoog naar rechts op een value van', joyX);
-  } else if (Math.abs(joyX) === 0 || Math.abs(joyX) === -0) {
-    console.log('je staat stil');
+
+  if (joyX < 0) {
+    moveLeft = true;
+  } else if (joyX > 0) {
+    moveRight = true;
+  } else if (Math.abs(joyX) === 0) {
+    moveLeft = false;
+    moveRight = false;
+  }
+
+  if (joyY < 0) {
+    moveForward = true;
+  } else if (joyY > 0) {
+    moveBackward = true;
+  } else if (Math.abs(joyX) === 0) {
+    moveForward = false;
+    moveBackward = false;
   }
   window.requestAnimationFrame(gamepadControls);
 };
