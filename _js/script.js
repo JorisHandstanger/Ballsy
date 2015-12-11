@@ -1,7 +1,7 @@
 'use strict';
 
 require('./modules/controls');
-import {getRandomPoint, getRandomColor} from './helpers/util';
+import {getRandomPoint, getRandomColor, lightenColor} from './helpers/util';
 import {deadzone} from './helpers/controller';
 import Orb from './modules/Orb';
 
@@ -12,6 +12,15 @@ let controls, stats, element;
 
 let orbs = [];
 let objects = [];
+
+let context = new AudioContext();
+let sourceNode;
+let javascriptNode;
+let analyser;
+
+let grid;
+let grid2;
+let grid3;
 
 let raycaster;
 
@@ -171,10 +180,111 @@ const init = () => {
   mesh = new THREE.Mesh( geometry, material );
   scene.add( mesh );
 
-  let grid = new THREE.GridHelper(1000, 30);
+  grid = new THREE.GridHelper(1000, 270);
   grid.setColors( new THREE.Color(0x333333), new THREE.Color(0x333333) );
   grid.position.y = 1;
   scene.add(grid);
+
+  grid2 = new THREE.GridHelper(1000, 90);
+  grid2.setColors( new THREE.Color(0x333333), new THREE.Color(0x333333) );
+  grid2.position.y = 2;
+  scene.add(grid2);
+
+  grid3 = new THREE.GridHelper(1000, 30);
+  grid3.setColors( new THREE.Color(0x333333), new THREE.Color(0x333333) );
+  grid3.position.y = 3;
+  scene.add(grid3);
+
+  // AUDIO
+
+  if (!window.AudioContext) {
+    if (!window.webkitAudioContext) {
+      instructions.innerHTML = 'Your browser doesn\'t seem to support the Audio API';
+    }
+    window.AudioContext = window.webkitAudioContext;
+  }
+
+  const loadSound = (url) => {
+    let request = new XMLHttpRequest();
+    request.open('GET', url, true);
+    request.responseType = 'arraybuffer';
+
+    // When loaded decode the data
+    request.onload = function() {
+
+      // decode the data
+      context.decodeAudioData(request.response, (buffer) => {
+        // when the audio is decoded play the sound
+        playSound(buffer);
+      }, onError);
+    };
+
+    request.send();
+  };
+
+  const playSound = (buffer) => {
+    sourceNode.buffer = buffer;
+    sourceNode.start(0);
+  };
+
+  // log if an error occurs
+  const onError = (e) => {
+    console.log(e);
+  };
+
+  const setupAudioNodes = () => {
+
+    // setup a javascript node
+    javascriptNode = context.createScriptProcessor(2048, 1, 1);
+    // connect to destination, else it isn't called
+    javascriptNode.connect(context.destination);
+
+    // setup a analyzer
+    analyser = context.createAnalyser();
+    analyser.smoothingTimeConstant = 0.9;
+    analyser.fftSize = 32;
+
+    // create a buffer source node
+    sourceNode = context.createBufferSource();
+    sourceNode.connect(analyser);
+    analyser.connect(javascriptNode);
+
+    sourceNode.connect(context.destination);
+  };
+
+  const updateWithSound = (array) => {
+    let value = (array[7]/255)*100;
+    let value2 = (array[11]/255)*100;
+    let value3 = (array[13]/255)*100;
+
+    let gridcolor3 = 0x02070d;
+    let gridcolor2 = 0x250935;
+    let gridcolor = 0x350926;
+
+    let newColor = new THREE.Color(parseInt(lightenColor(gridcolor, value), 16));
+    let newColor2 = new THREE.Color(parseInt(lightenColor(gridcolor2, value2), 16));
+    let newColor3 = new THREE.Color(parseInt(lightenColor(gridcolor3, value3), 16));
+
+    grid.setColors( newColor, newColor );
+    grid2.setColors( newColor2, newColor2 );
+    grid3.setColors( newColor3, newColor3 );
+
+  };
+
+  setupAudioNodes();
+  loadSound('./assets/monody.mp3');
+
+  javascriptNode.onaudioprocess = () => {
+
+    // get the average for the first channel
+    var array = new Uint8Array(analyser.frequencyBinCount);
+    analyser.getByteFrequencyData(array);
+
+    console.log(array);
+
+    updateWithSound(array);
+
+  };
 
   // Renderen van de orbs
   orbs.forEach(e => {
