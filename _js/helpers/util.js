@@ -26,6 +26,20 @@ export const getRandomColor = () => {
   return color;
 };
 
+export const getAverageValue = (array, min, max) => {
+  var values = 0;
+  var average;
+
+  var length = max - min;
+
+  for (var i = min; i < max; i++) {
+    values += array[i];
+  }
+
+  average = values / length;
+  return average;
+};
+
 export const lightenColor = (color, percent) => {
   let num = parseInt(color, 16),
     amt = Math.round(2.55 * percent),

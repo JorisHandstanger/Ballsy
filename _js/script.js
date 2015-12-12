@@ -1,7 +1,7 @@
 'use strict';
 
 require('./modules/controls');
-import {getRandomPoint, getRandomColor, lightenColor} from './helpers/util';
+import {getRandomPoint, getRandomColor, lightenColor, getAverageValue} from './helpers/util';
 import {deadzone} from './helpers/controller';
 import Orb from './modules/Orb';
 
@@ -153,7 +153,7 @@ const init = () => {
   controls = new THREE.PointerLockControls( camera );
   scene.add( controls.getObject() );
 
-  for (let i = 0; i <= 50; i++) {
+  for (let i = 0; i <= 20; i++) {
     let orb = new Orb(
       i,
       getRandomPoint(),
@@ -235,13 +235,13 @@ const init = () => {
   const setupAudioNodes = () => {
 
     // setup a javascript node
-    javascriptNode = context.createScriptProcessor(2048, 1, 1);
+    javascriptNode = context.createScriptProcessor(4096, 1, 1);
     // connect to destination, else it isn't called
     javascriptNode.connect(context.destination);
 
     // setup a analyzer
     analyser = context.createAnalyser();
-    analyser.smoothingTimeConstant = 0.9;
+    analyser.smoothingTimeConstant = 0.5;
     analyser.fftSize = 32;
 
     // create a buffer source node
@@ -253,17 +253,18 @@ const init = () => {
   };
 
   const updateWithSound = (array) => {
-    let value = (array[7]/255)*100;
-    let value2 = (array[11]/255)*100;
-    let value3 = (array[13]/255)*100;
+
+    let lowtones = ((getAverageValue(array, 1, 5))/255)*100;
+    let midtones = ((getAverageValue(array, 6, 10))/255)*100;
+    let hightones = ((getAverageValue(array, 11, 15))/255)*100;
 
     let gridcolor3 = 0x02070d;
     let gridcolor2 = 0x250935;
     let gridcolor = 0x350926;
 
-    let newColor = new THREE.Color(parseInt(lightenColor(gridcolor, value), 16));
-    let newColor2 = new THREE.Color(parseInt(lightenColor(gridcolor2, value2), 16));
-    let newColor3 = new THREE.Color(parseInt(lightenColor(gridcolor3, value3), 16));
+    let newColor = new THREE.Color(parseInt(lightenColor(gridcolor, lowtones), 16));
+    let newColor2 = new THREE.Color(parseInt(lightenColor(gridcolor2, midtones), 16));
+    let newColor3 = new THREE.Color(parseInt(lightenColor(gridcolor3, hightones), 16));
 
     grid.setColors( newColor, newColor );
     grid2.setColors( newColor2, newColor2 );

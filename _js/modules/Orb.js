@@ -21,10 +21,9 @@ export default class Orb {
     let time = performance.now();
     let sineScale = 1 - (Math.sin(time/800 - 1)/8);
 
-    this.obj.shape.children[0].intensity = (sineScale*2);
     this.obj.shape.children[1].scale.set(sineScale, sineScale, sineScale);
 
-    this.obj.shape.children[1].material.opacity = this.health/100;
+    this.obj.shape.children[1].material.opacity = this.health/170;
 
   }
 

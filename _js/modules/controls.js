@@ -18,7 +18,7 @@ THREE.PointerLockControls = function ( camera ) {
 
   var PI_2 = Math.PI / 2;
 
-  var onMouseMove = function ( event ) {
+  var onMouseMove = (event) => {
 
     if ( scope.enabled === false ) return;
 
@@ -32,7 +32,7 @@ THREE.PointerLockControls = function ( camera ) {
 
   };
 
-  this.dispose = function() {
+  this.dispose = () => {
 
     document.removeEventListener( 'mousemove', onMouseMove, false );
 
@@ -42,19 +42,19 @@ THREE.PointerLockControls = function ( camera ) {
 
   this.enabled = false;
 
-  this.getObject = function () {
+  this.getObject = () => {
 
     return yawObject;
 
   };
 
-  this.getPitchObject = function () {
+  this.getPitchObject = () => {
 
     return pitchObject;
 
   };
 
-  this.getDirection = function() {
+  this.getDirection = () => {
 
     // assumes the camera itself is not rotated
 
