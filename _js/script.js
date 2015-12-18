@@ -184,7 +184,7 @@ const init = () => {
     const setupAudioNodes = () => {
 
       // setup a javascript node
-      javascriptNode = context.createScriptProcessor(4096, 1, 1);
+      javascriptNode = context.createScriptProcessor(2048, 1, 1);
       // connect to destination, else it isn't called
       javascriptNode.connect(context.destination);
 
