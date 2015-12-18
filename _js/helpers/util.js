@@ -8,6 +8,11 @@ export const getRandomPoint = () => {
   };
 };
 
+export const last = arr => arr.slice(-1)[0];
+
+export const without = (arr, ...values) =>
+  arr.filter(el => !values.some(exclude => el === exclude));
+
 export const randomBetween = (min, max) => {
   let rand = min + Math.random() * (max-min);
   if(rand) rand = Math.round(rand);
