@@ -1,7 +1,7 @@
 'use strict';
 
 require('./modules/controls');
-import {getRandomPoint, getRandomColor} from './helpers/util';
+import {getRandomPoint, getRandomColor, without, last} from './helpers/util';
 import {deadzone} from './helpers/controller';
 import Orb from './modules/Orb';
 import Environment from './modules/environment';
@@ -114,6 +114,11 @@ const init = () => {
   socket = io(window.location.host);
 
   socket.on('init', clients => {
+    console.log(clients);
+    let self = last(clients);
+    let enemies = without(clients, self);
+    console.log(enemies);
+
     camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 1, 1000 );
 
     scene = new THREE.Scene();
