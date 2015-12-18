@@ -34,13 +34,13 @@ export default class Environment {
     this.grid2.setColors( newColor2, newColor2 );
     this.grid3.setColors( newColor3, newColor3 );
 
-    if(this.tower.type === "Object3D"){
+    if(this.tower.type === 'Object3D'){
       this.tower.children[0].material.color = newColor3;
 
       this.tower.scale.set(0.3, 0.3 + hightones/300, 0.3);
     }
 
-    if(this.ring.type === "Object3D"){
+    if(this.ring.type === 'Object3D'){
       this.ring.children[0].material.color = newColor2;
 
       this.ring.scale.set(0.3, 0.3 + midtones/300, 0.3);

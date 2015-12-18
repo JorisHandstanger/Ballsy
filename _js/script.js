@@ -7,6 +7,7 @@ import Orb from './modules/Orb';
 import Environment from './modules/environment';
 
 let socket;
+let self;
 
 let camera, scene, renderer, composer;
 
@@ -115,7 +116,7 @@ const init = () => {
 
   socket.on('init', clients => {
     console.log(clients);
-    let self = last(clients);
+    self = last(clients);
     let enemies = without(clients, self);
     console.log(enemies);
 
@@ -131,14 +132,47 @@ const init = () => {
     controls = new THREE.PointerLockControls( camera );
     scene.add( controls.getObject() );
 
-    for (let i = 0; i <= 20; i++) {
+    for (let i = 0; i <= 5; i++) {
       let orb = new Orb(
         i,
+        false,
         getRandomPoint(),
         getRandomColor()
       );
       orbs.push(orb);
     }
+
+    enemies.forEach(e => {
+      let orb = new Orb(
+        e.id,
+        true,
+        getRandomPoint(),
+        getRandomColor()
+      );
+      orbs.push(orb);
+    });
+
+    socket.on('join', client => {
+      let orb = new Orb(
+        client.id,
+        true,
+        getRandomPoint(),
+        getRandomColor()
+      );
+      orbs.push(orb);
+    });
+
+    socket.on('updatePos', data => {
+      orbs.forEach(e => {
+        if(e.id === data.id){
+          console.log(data);
+          e.position.x = data.x;
+          e.position.y = data.y;
+          e.position.z = data.z;
+        }
+      });
+
+    });
 
     document.addEventListener( 'keydown', onKeyDown, false );
     document.addEventListener( 'keyup', onKeyUp, false );
@@ -255,6 +289,7 @@ const init = () => {
 
     animate();
   });
+
 };
 
 const animate = () => {
@@ -282,6 +317,17 @@ const animate = () => {
     controls.getObject().translateX( velocity.x * delta );
     controls.getObject().translateY( velocity.y * delta );
     controls.getObject().translateZ( velocity.z * delta );
+
+    if((Math.abs(velocity.y) >= 0.01) || (Math.abs(velocity.x) >= 0.01) || (Math.abs(velocity.z) >= 0.01)){
+      let position = {
+        id: self.id,
+        x: controls.getObject().position.x,
+        y: controls.getObject().position.y,
+        z: controls.getObject().position.z
+      };
+
+      socket.emit('position', position);
+    }
 
     prevTime = time;
   }
@@ -354,6 +400,7 @@ const onKeyDown = event => {
     moveRight = true;
     break;
   }
+
 };
 
 const onKeyUp = event => {
