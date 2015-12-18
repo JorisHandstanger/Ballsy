@@ -112,7 +112,7 @@ if (havePointerLock) {
 }
 
 const init = () => {
-  socket = io('http://localhost:5000');
+  socket = io(window.location.host);
 
   socket.on('init', clients => {
     camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 1, 1000 );
