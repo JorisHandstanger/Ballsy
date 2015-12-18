@@ -5,22 +5,19 @@ import {getRandomPoint, getRandomColor, lightenColor, getAverageValue} from './h
 import {deadzone} from './helpers/controller';
 import Orb from './modules/Orb';
 
+let socket;
+
 let camera, scene, renderer, composer;
 
 let geometry, material, mesh;
 let controls, stats, element;
 
-let orbs = [];
-let objects = [];
+let [orbs, objects] = [[], []];
 
 let context = new AudioContext();
-let sourceNode;
-let javascriptNode;
-let analyser;
+let sourceNode, javascriptNode, analyser;
 
-let grid;
-let grid2;
-let grid3;
+let grid, grid2, grid3;
 
 let raycaster;
 
@@ -29,21 +26,20 @@ let crosshairs = document.getElementById( 'crosshairs' );
 let instructions = document.getElementById( 'instructions' );
 
 let controlsEnabled = false;
-
-let moveForward = false;
-let moveBackward = false;
-let moveLeft = false;
-let moveRight = false;
+let [moveForward, moveBackward, moveLeft, moveRight] =
+  [false, false, false, false];
 
 let prevTime = performance.now();
 let velocity = new THREE.Vector3();
 
-//http://www.html5rocks.com/en/tutorials/pointerlock/intro/
-
-let havePointerLock = 'pointerLockElement' in document || 'mozPointerLockElement' in document || 'webkitPointerLockElement' in document;
+let havePointerLock = 'pointerLockElement' in document ||
+  'mozPointerLockElement' in document ||
+  'webkitPointerLockElement' in document;
 
 const pointerlockchange = () => {
-  if ( document.pointerLockElement === element || document.mozPointerLockElement === element || document.webkitPointerLockElement === element ) {
+  if (document.pointerLockElement === element ||
+      document.mozPointerLockElement === element ||
+      document.webkitPointerLockElement === element) {
     controlsEnabled = true;
     controls.enabled = true;
 
@@ -64,7 +60,7 @@ const pointerlockerror = () => {
   crosshairs.style.display = 'block';
 };
 
-if ( havePointerLock ) {
+if (havePointerLock) {
   element = document.body;
 
   // Performance monitor voor development
@@ -115,6 +111,245 @@ if ( havePointerLock ) {
   instructions.innerHTML = 'Your browser doesn\'t seem to support Pointer Lock API';
 }
 
+const init = () => {
+  socket = io('http://localhost:3000');
+
+  socket.on('init', clients => {
+    camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 1, 1000 );
+
+    scene = new THREE.Scene();
+    scene.fog = new THREE.Fog( 0x000000, 0, 750 );
+
+    let light = new THREE.HemisphereLight( 0xeeeeff, 0x777788, 0.89 );
+    light.position.set( 0.5, 20, 0.75 );
+    scene.add( light );
+
+    controls = new THREE.PointerLockControls( camera );
+    scene.add( controls.getObject() );
+
+    for (let i = 0; i <= 20; i++) {
+      let orb = new Orb(
+        i,
+        getRandomPoint(),
+        getRandomColor()
+      );
+      orbs.push(orb);
+    }
+
+    document.addEventListener( 'keydown', onKeyDown, false );
+    document.addEventListener( 'keyup', onKeyUp, false );
+
+    raycaster = new THREE.Raycaster();
+
+    // floor
+    geometry = new THREE.PlaneGeometry( 2000, 2000 );
+    geometry.rotateX(-Math.PI / 2 );
+
+    material = new THREE.MeshPhongMaterial( {
+      color: 0x000000,
+      specular: 0x0F0F0F,
+      shininess: 60
+    });
+
+    mesh = new THREE.Mesh( geometry, material );
+    scene.add( mesh );
+
+    grid = new THREE.GridHelper(1000, 270);
+    grid.setColors( new THREE.Color(0x333333), new THREE.Color(0x333333) );
+    grid.position.y = 1;
+    scene.add(grid);
+
+    grid2 = new THREE.GridHelper(1000, 90);
+    grid2.setColors( new THREE.Color(0x333333), new THREE.Color(0x333333) );
+    grid2.position.y = 2;
+    scene.add(grid2);
+
+    grid3 = new THREE.GridHelper(1000, 30);
+    grid3.setColors( new THREE.Color(0x333333), new THREE.Color(0x333333) );
+    grid3.position.y = 3;
+    scene.add(grid3);
+
+    // AUDIO
+
+    if (!window.AudioContext) {
+      if (!window.webkitAudioContext) {
+        instructions.innerHTML = 'Your browser doesn\'t seem to support the Audio API';
+      }
+      window.AudioContext = window.webkitAudioContext;
+    }
+
+    const loadSound = (url) => {
+      let request = new XMLHttpRequest();
+      request.open('GET', url, true);
+      request.responseType = 'arraybuffer';
+
+      // When loaded decode the data
+      request.onload = function() {
+
+        // decode the data
+        context.decodeAudioData(request.response, (buffer) => {
+          // when the audio is decoded play the sound
+          playSound(buffer);
+        }, onError);
+      };
+
+      request.send();
+    };
+
+    const playSound = (buffer) => {
+      sourceNode.buffer = buffer;
+      sourceNode.start(0);
+    };
+
+    // log if an error occurs
+    const onError = (e) => {
+      console.log(e);
+    };
+
+    const setupAudioNodes = () => {
+
+      // setup a javascript node
+      javascriptNode = context.createScriptProcessor(4096, 1, 1);
+      // connect to destination, else it isn't called
+      javascriptNode.connect(context.destination);
+
+      // setup a analyzer
+      analyser = context.createAnalyser();
+      analyser.smoothingTimeConstant = 0.5;
+      analyser.fftSize = 32;
+
+      // create a buffer source node
+      sourceNode = context.createBufferSource();
+      sourceNode.connect(analyser);
+      analyser.connect(javascriptNode);
+
+      sourceNode.connect(context.destination);
+    };
+
+    const updateWithSound = (array) => {
+
+      let lowtones = ((getAverageValue(array, 1, 5))/255)*100;
+      let midtones = ((getAverageValue(array, 6, 10))/255)*100;
+      let hightones = ((getAverageValue(array, 11, 15))/255)*100;
+
+      let gridcolor3 = 0x02070d;
+      let gridcolor2 = 0x250935;
+      let gridcolor = 0x350926;
+
+      let newColor = new THREE.Color(parseInt(lightenColor(gridcolor, lowtones), 16));
+      let newColor2 = new THREE.Color(parseInt(lightenColor(gridcolor2, midtones), 16));
+      let newColor3 = new THREE.Color(parseInt(lightenColor(gridcolor3, hightones), 16));
+
+      grid.setColors( newColor, newColor );
+      grid2.setColors( newColor2, newColor2 );
+      grid3.setColors( newColor3, newColor3 );
+
+    };
+
+    setupAudioNodes();
+    loadSound('./assets/monody.mp3');
+
+    javascriptNode.onaudioprocess = () => {
+
+      // get the average for the first channel
+      var array = new Uint8Array(analyser.frequencyBinCount);
+      analyser.getByteFrequencyData(array);
+
+      console.log(array);
+
+      updateWithSound(array);
+
+    };
+
+    // Renderen van de orbs
+    orbs.forEach(e => {
+      scene.add(e.render());
+      objects.push(e.obj.shape);
+    });
+
+    //
+    renderer = new THREE.WebGLRenderer();
+    renderer.setClearColor(0x000000);
+    renderer.setPixelRatio( window.devicePixelRatio );
+    renderer.setSize( window.innerWidth, window.innerHeight );
+    document.body.appendChild( renderer.domElement );
+
+    //
+    renderer.autoClear = false;
+
+    composer = new THREE.EffectComposer(renderer);
+
+    let renderPass = new THREE.RenderPass(scene, camera);
+    composer.addPass(renderPass);
+
+    // Bloom pass voor glow
+
+    let bloomPass = new THREE.BloomPass(2, 20, 3, 256); // (strength, kernelSize, sigma, resolution)
+    composer.addPass(bloomPass);
+    let effectCopy = new THREE.ShaderPass(THREE.CopyShader);
+    effectCopy.renderToScreen = true;
+    composer.addPass(effectCopy);
+
+    window.addEventListener( 'resize', onWindowResize, false );
+    window.addEventListener('gamepadconnected', gamepadControls);
+
+    animate();
+  });
+};
+
+const animate = () => {
+  requestAnimationFrame(animate);
+
+  stats.begin(); // Begin van te monitoren code
+
+  if (controlsEnabled) {
+    let time = performance.now();
+    let delta = ( time - prevTime ) / 1000;
+
+    velocity.x -= velocity.x * 5.0 * delta;
+    velocity.z -= velocity.z * 5.0 * delta;
+    velocity.y -= velocity.y * 5.0 * delta;
+
+    if (moveForward) velocity.z -= (500.0 * delta)-(((500.0 * delta)/(90 * Math.PI / 180))*Math.abs(controls.getPitchObject().rotation.x));
+    if (moveBackward) velocity.z += (500.0 * delta)-(((500.0 * delta)/(90 * Math.PI / 180))*Math.abs(controls.getPitchObject().rotation.x));
+
+    if (moveLeft) velocity.x -= 500.0 * delta;
+    if (moveRight) velocity.x += 500.0 * delta;
+
+    if (moveForward) velocity.y += ((500.0 * delta)/(90 * Math.PI / 180))*controls.getPitchObject().rotation.x;
+    if (moveBackward) velocity.y -= ((500.0 * delta)/(90 * Math.PI / 180))*controls.getPitchObject().rotation.x;
+
+    controls.getObject().translateX( velocity.x * delta );
+    controls.getObject().translateY( velocity.y * delta );
+    controls.getObject().translateZ( velocity.z * delta );
+
+    prevTime = time;
+  }
+
+  renderer.clear();
+  composer.render();
+
+  orbs.forEach(e => {
+    e.update();
+  });
+
+  raycaster.setFromCamera( {x: 0, y: 0}, camera );
+
+  let intersects = raycaster.intersectObjects( objects, true );
+
+  for(let i = 0; i < intersects.length; i++) {
+    if(orbs[intersects[i].object.name] !== undefined){
+      let orb = orbs[intersects[i].object.name];
+
+      if(orb.health > 0 && orb.health !== undefined){
+        orb.health -= 2;
+      }
+    }
+  }
+
+  stats.end();
+};
+
 const gamepadControls = () => {
   let gamepad = navigator.getGamepads()[0];
   let joyX = deadzone(gamepad.axes[0], 0.25);
@@ -140,286 +375,41 @@ const gamepadControls = () => {
   window.requestAnimationFrame(gamepadControls);
 };
 
-const init = () => {
-  camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 1, 1000 );
-
-  scene = new THREE.Scene();
-  scene.fog = new THREE.Fog( 0x000000, 0, 750 );
-
-  let light = new THREE.HemisphereLight( 0xeeeeff, 0x777788, 0.89 );
-  light.position.set( 0.5, 20, 0.75 );
-  scene.add( light );
-
-  controls = new THREE.PointerLockControls( camera );
-  scene.add( controls.getObject() );
-
-  for (let i = 0; i <= 20; i++) {
-    let orb = new Orb(
-      i,
-      getRandomPoint(),
-      getRandomColor()
-    );
-    orbs.push(orb);
-  }
-
-  document.addEventListener( 'keydown', onKeyDown, false );
-  document.addEventListener( 'keyup', onKeyUp, false );
-
-  raycaster = new THREE.Raycaster();
-
-  // floor
-  geometry = new THREE.PlaneGeometry( 2000, 2000 );
-  geometry.rotateX(-Math.PI / 2 );
-
-  material = new THREE.MeshPhongMaterial( {
-    color: 0x000000,
-    specular: 0x0F0F0F,
-    shininess: 60
-  });
-
-  mesh = new THREE.Mesh( geometry, material );
-  scene.add( mesh );
-
-  grid = new THREE.GridHelper(1000, 270);
-  grid.setColors( new THREE.Color(0x333333), new THREE.Color(0x333333) );
-  grid.position.y = 1;
-  scene.add(grid);
-
-  grid2 = new THREE.GridHelper(1000, 90);
-  grid2.setColors( new THREE.Color(0x333333), new THREE.Color(0x333333) );
-  grid2.position.y = 2;
-  scene.add(grid2);
-
-  grid3 = new THREE.GridHelper(1000, 30);
-  grid3.setColors( new THREE.Color(0x333333), new THREE.Color(0x333333) );
-  grid3.position.y = 3;
-  scene.add(grid3);
-
-  // AUDIO
-
-  if (!window.AudioContext) {
-    if (!window.webkitAudioContext) {
-      instructions.innerHTML = 'Your browser doesn\'t seem to support the Audio API';
-    }
-    window.AudioContext = window.webkitAudioContext;
-  }
-
-  const loadSound = (url) => {
-    let request = new XMLHttpRequest();
-    request.open('GET', url, true);
-    request.responseType = 'arraybuffer';
-
-    // When loaded decode the data
-    request.onload = function() {
-
-      // decode the data
-      context.decodeAudioData(request.response, (buffer) => {
-        // when the audio is decoded play the sound
-        playSound(buffer);
-      }, onError);
-    };
-
-    request.send();
-  };
-
-  const playSound = (buffer) => {
-    sourceNode.buffer = buffer;
-    sourceNode.start(0);
-  };
-
-  // log if an error occurs
-  const onError = (e) => {
-    console.log(e);
-  };
-
-  const setupAudioNodes = () => {
-
-    // setup a javascript node
-    javascriptNode = context.createScriptProcessor(4096, 1, 1);
-    // connect to destination, else it isn't called
-    javascriptNode.connect(context.destination);
-
-    // setup a analyzer
-    analyser = context.createAnalyser();
-    analyser.smoothingTimeConstant = 0.5;
-    analyser.fftSize = 32;
-
-    // create a buffer source node
-    sourceNode = context.createBufferSource();
-    sourceNode.connect(analyser);
-    analyser.connect(javascriptNode);
-
-    sourceNode.connect(context.destination);
-  };
-
-  const updateWithSound = (array) => {
-
-    let lowtones = ((getAverageValue(array, 1, 5))/255)*100;
-    let midtones = ((getAverageValue(array, 6, 10))/255)*100;
-    let hightones = ((getAverageValue(array, 11, 15))/255)*100;
-
-    let gridcolor3 = 0x02070d;
-    let gridcolor2 = 0x250935;
-    let gridcolor = 0x350926;
-
-    let newColor = new THREE.Color(parseInt(lightenColor(gridcolor, lowtones), 16));
-    let newColor2 = new THREE.Color(parseInt(lightenColor(gridcolor2, midtones), 16));
-    let newColor3 = new THREE.Color(parseInt(lightenColor(gridcolor3, hightones), 16));
-
-    grid.setColors( newColor, newColor );
-    grid2.setColors( newColor2, newColor2 );
-    grid3.setColors( newColor3, newColor3 );
-
-  };
-
-  setupAudioNodes();
-  loadSound('./assets/monody.mp3');
-
-  javascriptNode.onaudioprocess = () => {
-
-    // get the average for the first channel
-    var array = new Uint8Array(analyser.frequencyBinCount);
-    analyser.getByteFrequencyData(array);
-
-    console.log(array);
-
-    updateWithSound(array);
-
-  };
-
-  // Renderen van de orbs
-  orbs.forEach(e => {
-    scene.add(e.render());
-    objects.push(e.obj.shape);
-  });
-
-  //
-  renderer = new THREE.WebGLRenderer();
-  renderer.setClearColor(0x000000);
-  renderer.setPixelRatio( window.devicePixelRatio );
-  renderer.setSize( window.innerWidth, window.innerHeight );
-  document.body.appendChild( renderer.domElement );
-
-  //
-  renderer.autoClear = false;
-
-  composer = new THREE.EffectComposer(renderer);
-
-  let renderPass = new THREE.RenderPass(scene, camera);
-  composer.addPass(renderPass);
-
-  // Bloom pass voor glow
-
-  let bloomPass = new THREE.BloomPass(2, 20, 3, 256); // (strength, kernelSize, sigma, resolution)
-  composer.addPass(bloomPass);
-  let effectCopy = new THREE.ShaderPass(THREE.CopyShader);
-  effectCopy.renderToScreen = true;
-  composer.addPass(effectCopy);
-
-  window.addEventListener( 'resize', onWindowResize, false );
-  window.addEventListener('gamepadconnected', gamepadControls);
-};
-
-const animate = () => {
-
-  requestAnimationFrame( animate );
-
-  stats.begin(); // Begin van te monitoren code
-
-  if ( controlsEnabled ) {
-
-    let time = performance.now();
-    let delta = ( time - prevTime ) / 1000;
-
-    velocity.x -= velocity.x * 5.0 * delta;
-    velocity.z -= velocity.z * 5.0 * delta;
-    velocity.y -= velocity.y * 5.0 * delta;
-
-    if ( moveForward ) velocity.z -= (500.0 * delta)-(((500.0 * delta)/(90 * Math.PI / 180))*Math.abs(controls.getPitchObject().rotation.x));
-    if ( moveBackward ) velocity.z += (500.0 * delta)-(((500.0 * delta)/(90 * Math.PI / 180))*Math.abs(controls.getPitchObject().rotation.x));
-
-    if ( moveLeft ) velocity.x -= 500.0 * delta;
-    if ( moveRight ) velocity.x += 500.0 * delta;
-
-    if ( moveForward ) velocity.y += ((500.0 * delta)/(90 * Math.PI / 180))*controls.getPitchObject().rotation.x;
-    if ( moveBackward ) velocity.y -= ((500.0 * delta)/(90 * Math.PI / 180))*controls.getPitchObject().rotation.x;
-
-
-    controls.getObject().translateX( velocity.x * delta );
-    controls.getObject().translateY( velocity.y * delta );
-    controls.getObject().translateZ( velocity.z * delta );
-
-    prevTime = time;
-  }
-
-  renderer.clear();
-  composer.render();
-
-  orbs.forEach(e => {
-    e.update();
-  });
-
-  raycaster.setFromCamera( {x: 0, y: 0}, camera );
-
-  let intersects = raycaster.intersectObjects( objects, true );
-
-  for ( var i = 0; i < intersects.length; i++ ) {
-
-    if(orbs[intersects[i].object.name] !== undefined){
-      let orb = orbs[intersects[i].object.name];
-
-      if(orb.health > 0 && orb.health !== undefined){
-        orb.health -= 2;
-      }
-    }
-  }
-
-  stats.end();
-};
-
 const onKeyDown = event => {
-  switch ( event.keyCode ) {
-
+  switch (event.keyCode) {
   case 38: // up
   case 90: // z
     moveForward = true;
     break;
-
   case 37: // left
   case 81: // q
     moveLeft = true;
     break;
-
   case 40: // down
   case 83: // s
     moveBackward = true;
     break;
-
   case 39: // right
   case 68: // d
     moveRight = true;
     break;
-
   }
 };
 
 const onKeyUp = event => {
-  switch( event.keyCode ) {
+  switch(event.keyCode) {
   case 38: // up
   case 90: // z
     moveForward = false;
     break;
-
   case 37: // left
   case 81: // q
     moveLeft = false;
     break;
-
   case 40: // down
   case 83: // s
     moveBackward = false;
     break;
-
   case 39: // right
   case 68: // d
     moveRight = false;
@@ -430,9 +420,7 @@ const onKeyUp = event => {
 const onWindowResize = () => {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
-
-  renderer.setSize( window.innerWidth, window.innerHeight );
+  renderer.setSize(window.innerWidth, window.innerHeight);
 };
 
 init();
-animate();
