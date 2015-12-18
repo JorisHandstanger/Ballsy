@@ -4,9 +4,10 @@ import {lightenColor} from '../helpers/util';
 
 export default class Orb {
 
-  constructor(id, position, color){
+  constructor(id, player, position, color){
 
     this.id = id;
+    this.player = player;
     this.color = color;
     this.position = position;
 
@@ -24,6 +25,8 @@ export default class Orb {
     this.obj.shape.children[1].scale.set(sineScale, sineScale, sineScale);
 
     this.obj.shape.children[1].material.opacity = this.health/170;
+
+    this.obj.shape.position.set(this.position);
 
   }
 

@@ -13,6 +13,10 @@ module.exports.register = (server, options, next) => {
 
     socket.on('hit', data => io.to(data.to).emit('hit', data.from));
 
+    socket.on("position", data => {
+        socket.broadcast.emit('updatePos', data);
+    });
+
     let maxId = 0;
     if (clients.length > 0) {
       clients.forEach(client => {
