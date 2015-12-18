@@ -1,23 +1,22 @@
 'use strict';
 
 require('./modules/controls');
-import {getRandomPoint, getRandomColor, lightenColor, getAverageValue} from './helpers/util';
+import {getRandomPoint, getRandomColor} from './helpers/util';
 import {deadzone} from './helpers/controller';
 import Orb from './modules/Orb';
+import Environment from './modules/environment';
 
 let socket;
 
 let camera, scene, renderer, composer;
 
-let geometry, material, mesh;
 let controls, stats, element;
 
 let [orbs, objects] = [[], []];
+let environment;
 
 let context = new AudioContext();
 let sourceNode, javascriptNode, analyser;
-
-let grid, grid2, grid3;
 
 let raycaster;
 
@@ -141,33 +140,9 @@ const init = () => {
 
     raycaster = new THREE.Raycaster();
 
-    // floor
-    geometry = new THREE.PlaneGeometry( 2000, 2000 );
-    geometry.rotateX(-Math.PI / 2 );
+    environment = new Environment();
 
-    material = new THREE.MeshPhongMaterial( {
-      color: 0x000000,
-      specular: 0x0F0F0F,
-      shininess: 60
-    });
-
-    mesh = new THREE.Mesh( geometry, material );
-    scene.add( mesh );
-
-    grid = new THREE.GridHelper(1000, 270);
-    grid.setColors( new THREE.Color(0x333333), new THREE.Color(0x333333) );
-    grid.position.y = 1;
-    scene.add(grid);
-
-    grid2 = new THREE.GridHelper(1000, 90);
-    grid2.setColors( new THREE.Color(0x333333), new THREE.Color(0x333333) );
-    grid2.position.y = 2;
-    scene.add(grid2);
-
-    grid3 = new THREE.GridHelper(1000, 30);
-    grid3.setColors( new THREE.Color(0x333333), new THREE.Color(0x333333) );
-    grid3.position.y = 3;
-    scene.add(grid3);
+    scene.add(environment.render());
 
     // AUDIO
 
@@ -226,26 +201,6 @@ const init = () => {
       sourceNode.connect(context.destination);
     };
 
-    const updateWithSound = (array) => {
-
-      let lowtones = ((getAverageValue(array, 1, 5))/255)*100;
-      let midtones = ((getAverageValue(array, 6, 10))/255)*100;
-      let hightones = ((getAverageValue(array, 11, 15))/255)*100;
-
-      let gridcolor3 = 0x02070d;
-      let gridcolor2 = 0x250935;
-      let gridcolor = 0x350926;
-
-      let newColor = new THREE.Color(parseInt(lightenColor(gridcolor, lowtones), 16));
-      let newColor2 = new THREE.Color(parseInt(lightenColor(gridcolor2, midtones), 16));
-      let newColor3 = new THREE.Color(parseInt(lightenColor(gridcolor3, hightones), 16));
-
-      grid.setColors( newColor, newColor );
-      grid2.setColors( newColor2, newColor2 );
-      grid3.setColors( newColor3, newColor3 );
-
-    };
-
     setupAudioNodes();
     loadSound('./assets/monody.mp3');
 
@@ -255,9 +210,7 @@ const init = () => {
       var array = new Uint8Array(analyser.frequencyBinCount);
       analyser.getByteFrequencyData(array);
 
-      // console.log(array);
-
-      updateWithSound(array);
+      environment.update(array);
 
     };
 
