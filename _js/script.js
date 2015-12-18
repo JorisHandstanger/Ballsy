@@ -132,7 +132,7 @@ const init = () => {
     controls = new THREE.PointerLockControls( camera );
     scene.add( controls.getObject() );
 
-    /*for (let i = 0; i <= 20; i++) {
+    for (let i = 0; i <= 5; i++) {
       let orb = new Orb(
         i,
         false,
@@ -140,7 +140,7 @@ const init = () => {
         getRandomColor()
       );
       orbs.push(orb);
-    }*/
+    }
 
     enemies.forEach(e => {
       let orb = new Orb(
@@ -152,7 +152,6 @@ const init = () => {
       orbs.push(orb);
     });
 
-
     socket.on('join', client => {
       let orb = new Orb(
         client.id,
@@ -160,9 +159,19 @@ const init = () => {
         getRandomPoint(),
         getRandomColor()
       );
-      console.log(orb);
       orbs.push(orb);
-      scene.add(orb.render());
+    });
+
+    socket.on('updatePos', data => {
+      orbs.forEach(e => {
+        if(e.id === data.id){
+          console.log(data);
+          e.position.x = data.x;
+          e.position.y = data.y;
+          e.position.z = data.z;
+        }
+      });
+
     });
 
     document.addEventListener( 'keydown', onKeyDown, false );
@@ -249,20 +258,6 @@ const init = () => {
       scene.add(e.render());
       objects.push(e.obj.shape);
     });
-
-    socket.on('updatePos', data => {
-      orbs.forEach(e => {
-        if(e.id === data.id){
-          console.log(data);
-          e.position.x = data.x;
-          e.position.y = data.y;
-          e.position.z = data.z;
-
-          e.update();
-        }
-      });
-
-   });
 
     //
     renderer = new THREE.WebGLRenderer();

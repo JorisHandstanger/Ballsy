@@ -23,10 +23,11 @@ export default class Orb {
     let sineScale = 1 - (Math.sin(time/800 - 1)/8);
 
     this.obj.shape.children[1].scale.set(sineScale, sineScale, sineScale);
-
     this.obj.shape.children[1].material.opacity = this.health/170;
 
-    this.obj.shape.position.set(this.position);
+    this.obj.shape.position.x = this.position.x;
+    this.obj.shape.position.y = this.position.y;
+    this.obj.shape.position.z = this.position.z;
 
   }
 
@@ -46,7 +47,7 @@ export default class Orb {
     light1.add( new THREE.Mesh( sphere, new THREE.MeshBasicMaterial( {
       color: parseInt(lightenColor(this.color, 50), 16)
     })));
-    light1.position.set(x, y, z);
+    light1.position.set(0, 0, 0);
     light1.name = this.id;
 
     group.add(light1);
@@ -61,11 +62,12 @@ export default class Orb {
     });
 
     outerBall = new THREE.Mesh(geometry.clone(), material.clone());
-    outerBall.position.set(x, y, z);
+    outerBall.position.set(0, 0, 0);
 
     outerBall.name = this.id;
 
     group.add(outerBall);
+    group.position.set(x, y, z);
 
     this.obj.shape = group;
 
