@@ -112,7 +112,7 @@ if (havePointerLock) {
 }
 
 const init = () => {
-  socket = io('http://localhost:3000');
+  socket = io('http://localhost:5000');
 
   socket.on('init', clients => {
     camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 1, 1000 );
@@ -255,7 +255,7 @@ const init = () => {
       var array = new Uint8Array(analyser.frequencyBinCount);
       analyser.getByteFrequencyData(array);
 
-      console.log(array);
+      // console.log(array);
 
       updateWithSound(array);
 

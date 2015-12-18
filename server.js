@@ -5,7 +5,7 @@ require('dotenv').load({silent: true});
 let Hapi = require('hapi');
 let path = require('path');
 
-let port = process.env.PORT || 3000;
+let port = process.env.PORT || 5000;
 
 let server = new Hapi.Server({
   connections: {
