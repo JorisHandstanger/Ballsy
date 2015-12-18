@@ -239,9 +239,11 @@ const init = () => {
 
     let bloomPass = new THREE.BloomPass(2, 20, 3, 256); // (strength, kernelSize, sigma, resolution)
     composer.addPass(bloomPass);
-    let effectCopy = new THREE.ShaderPass(THREE.CopyShader);
-    effectCopy.renderToScreen = true;
-    composer.addPass(effectCopy);
+
+    let glitchPass = new THREE.GlitchPass();
+    glitchPass.renderToScreen = true;
+    glitchPass.goWild = false;
+    composer.addPass(glitchPass);
 
     window.addEventListener( 'resize', onWindowResize, false );
     window.addEventListener('gamepadconnected', gamepadControls);
